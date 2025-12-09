@@ -5,10 +5,10 @@ import { Flashcard } from '../../../../models/flashcard.model';
 import { take } from 'rxjs/operators';
 
 @Component({
-    selector: 'app-multiple-choice',
-    standalone: true,
-    imports: [CommonModule],
-    template: `
+  selector: 'app-multiple-choice',
+  standalone: true,
+  imports: [CommonModule],
+  template: `
     <div class="card glass-panel quiz-card">
       <span class="level-tag">{{ card.level }}</span>
       <div class="content">
@@ -32,7 +32,7 @@ import { take } from 'rxjs/operators';
       </div>
     </div>
   `,
-    styles: [`
+  styles: [`
     .quiz-card { padding: 3rem 2rem; position: relative; text-align: center; }
     .level-tag { position: absolute; top: 1rem; right: 1rem; background: rgba(255,255,255,0.1); padding: 0.25rem 0.5rem; border-radius: var(--radius-sm); font-size: 0.8rem; }
     .instruction { color: var(--text-muted); }
@@ -68,50 +68,51 @@ import { take } from 'rxjs/operators';
   `]
 })
 export class MultipleChoiceComponent implements OnChanges {
-    @Input() card!: Flashcard;
-    @Output() next = new EventEmitter<{ correct: boolean }>();
+  @Input() card!: Flashcard;
+  @Output() next = new EventEmitter<{ correct: boolean }>();
 
-    options: string[] = [];
-    hasAnswered = false;
-    selectedOption: string | null = null;
+  options: string[] = [];
+  hasAnswered = false;
+  selectedOption: string | null = null;
 
-    constructor(private contentService: ContentService) { }
+  constructor(private contentService: ContentService) { }
 
-    ngOnChanges(changes: SimpleChanges) {
-        if (changes['card'] && this.card) {
-            this.generateOptions();
-        }
+  ngOnChanges(changes: SimpleChanges) {
+    if (changes['card'] && this.card) {
+      this.generateOptions();
     }
+  }
 
-    generateOptions() {
-        this.hasAnswered = false;
-        this.selectedOption = null;
+  generateOptions() {
+    this.hasAnswered = false;
+    this.selectedOption = null;
 
-        this.contentService.getCardsByLevels([this.card.level]).pipe(take(1)).subscribe(allCards => {
-            // Filter out current card
-            const distractors = allCards
-                .filter(c => c.id !== this.card.id)
-                .sort(() => Math.random() - 0.5)
-                .slice(0, 2)
-                .map(c => c.translation);
+    // Use the correct service method to fetch cards of the same level
+    this.contentService.getCardsByLevel(this.card.level).pipe(take(1)).subscribe((allCards: Flashcard[]) => {
+      // Filter out the current card to avoid duplicate answer
+      const distractors = allCards
+        .filter((c: Flashcard) => c.id !== this.card.id)
+        .sort(() => Math.random() - 0.5)
+        .slice(0, 2)
+        .map((c: Flashcard) => c.translation);
 
-            // Handle edge case if not enough cards
-            while (distractors.length < 2) {
-                distractors.push('Unknown'); // Fallback
-            }
+      // Ensure we have at least two distractors
+      while (distractors.length < 2) {
+        distractors.push('Unknown'); // fallback value
+      }
 
-            this.options = [this.card.translation, ...distractors].sort(() => Math.random() - 0.5);
-        });
-    }
+      this.options = [this.card.translation, ...distractors].sort(() => Math.random() - 0.5);
+    });
+  }
 
-    selectOption(option: string) {
-        this.hasAnswered = true;
-        this.selectedOption = option;
-        // Don't emit next immediately, wait for user to click Next
-    }
+  selectOption(option: string) {
+    this.hasAnswered = true;
+    this.selectedOption = option;
+    // Don't emit next immediately, wait for user to click Next
+  }
 
-    nextCard() {
-        const isCorrect = this.selectedOption === this.card.translation;
-        this.next.emit({ correct: isCorrect });
-    }
+  nextCard() {
+    const isCorrect = this.selectedOption === this.card.translation;
+    this.next.emit({ correct: isCorrect });
+  }
 }

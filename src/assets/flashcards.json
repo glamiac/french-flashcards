@@ -1,0 +1,26 @@
+[
+    {
+        "id": "a1-1",
+        "term": "bonjour",
+        "translation": "hello",
+        "level": "A1",
+        "category": "Greetings",
+        "exampleSentence": "Bonjour, comment ça va?"
+    },
+    {
+        "id": "a1-2",
+        "term": "au revoir",
+        "translation": "goodbye",
+        "level": "A1",
+        "category": "Greetings",
+        "exampleSentence": "Au revoir et à bientôt!"
+    },
+    {
+        "id": "a1-3",
+        "term": "merci",
+        "translation": "thank you",
+        "level": "A1",
+        "category": "Greetings",
+        "exampleSentence": "Merci beaucoup."
+    }
+]

@@ -124,10 +124,11 @@ export class DictionaryComponent implements OnInit {
     constructor(private contentService: ContentService, private router: Router) { }
 
     ngOnInit() {
-        this.contentService.getCards().subscribe(cards => {
+        this.contentService.loadCards();
+        this.contentService.getCards().subscribe((cards: Flashcard[]) => {
             this.cards = cards;
+            this.categories = this.contentService.getAllCategories().sort();
         });
-        this.categories = this.contentService.getAllCategories().sort();
     }
 
     get filteredCards() {
