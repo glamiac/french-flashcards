@@ -69,6 +69,7 @@ import { take } from 'rxjs/operators';
 })
 export class MultipleChoiceComponent implements OnChanges {
   @Input() card!: Flashcard;
+  @Input() questionIndex: number = 0;
   @Output() next = new EventEmitter<{ correct: boolean }>();
 
   options: string[] = [];
@@ -78,7 +79,7 @@ export class MultipleChoiceComponent implements OnChanges {
   constructor(private contentService: ContentService) { }
 
   ngOnChanges(changes: SimpleChanges) {
-    if (changes['card'] && this.card) {
+    if ((changes['card'] || changes['questionIndex']) && this.card) {
       this.generateOptions();
     }
   }

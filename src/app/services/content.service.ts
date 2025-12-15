@@ -4,6 +4,7 @@ import { HttpClient } from '@angular/common/http';
 import { Flashcard, LanguageLevel } from '../models/flashcard.model';
 import { BehaviorSubject, Observable } from 'rxjs';
 import { map } from 'rxjs/operators';
+import { ProgressService } from './progress.service';
 
 @Injectable({
     providedIn: 'root'
@@ -14,7 +15,9 @@ export class ContentService {
 
     private cardsSubject = new BehaviorSubject<Flashcard[]>(this.flashcards);
 
-    constructor(private http: HttpClient) { }
+    constructor(private http: HttpClient, private progressService: ProgressService) {
+        this.loadCards();
+    }
 
     getCards(): Observable<Flashcard[]> {
         return this.cardsSubject.asObservable();
@@ -36,17 +39,72 @@ export class ContentService {
         );
     }
 
-    getAllCategories(): string[] {
-        const categories = new Set(this.flashcards.map(c => c.category));
-        return Array.from(categories);
-    }
-
     // Load flashcards from external JSON file
     loadCards(): void {
-        this.http.get<Flashcard[]>('flashcards.json').subscribe(cards => {
-            this.flashcards = cards;
-            this.cardsSubject.next(cards);
+        const timestamp = new Date().getTime();
+        console.log('ContentService: Loading cards from flashcards.json');
+        this.http.get<Flashcard[]>(`flashcards.json?v=${timestamp}`).subscribe({
+            next: (cards) => {
+                console.log(`ContentService: Loaded ${cards.length} cards`);
+                this.flashcards = cards;
+                this.cardsSubject.next(cards);
+            },
+            error: (err) => {
+                console.error('ContentService: Error loading cards', err);
+            }
         });
+    }
+
+    // prioritizing learning (>0 but <3 correct) > new (0 attempts) > mastered (>=3 correct)
+    getSmartSession(levels: LanguageLevel[], categories: string[], limit: number = 10): Observable<Flashcard[]> {
+        console.log(`getSmartSession called with levels: ${levels}, categories: ${categories}, limit: ${limit}`);
+        return this.getCardsByFilters(levels, categories).pipe(
+            map(cards => {
+                console.log(`getSmartSession: filtered cards count: ${cards.length}`);
+                const now = Date.now();
+
+                const learning: Flashcard[] = [];
+                const newCards: Flashcard[] = [];
+                const mastered: Flashcard[] = [];
+
+                cards.forEach(card => {
+                    const stats = this.progressService.getCardStats(card.id);
+                    if (stats.correctCount >= 3) mastered.push(card);
+                    else if (stats.correctCount > 0 || stats.incorrectCount > 0) learning.push(card);
+                    else newCards.push(card);
+                });
+
+                console.log(`Smart Session Stats - Learning: ${learning.length}, New: ${newCards.length}, Mastered: ${mastered.length}`);
+
+                // Shuffle
+                const shuffle = (arr: Flashcard[]) => arr.sort(() => Math.random() - 0.5);
+
+                // Concat: Learning -> New -> Mastered
+                let session = [...shuffle(learning), ...shuffle(newCards), ...shuffle(mastered)];
+
+                console.log(`getSmartSession: returning ${session.slice(0, limit).length} cards`);
+
+                return session.slice(0, limit);
+            })
+        );
+    }
+
+    getAllCategories(userLevels: LanguageLevel[] = []): { name: string; count: number }[] {
+        const counts: { [key: string]: number } = {};
+
+        let targetCards = this.flashcards;
+        if (userLevels.length > 0) {
+            targetCards = this.flashcards.filter(c => userLevels.includes(c.level));
+        }
+
+        targetCards.forEach(c => {
+            const cat = c.category || 'General Vocabulary';
+            counts[cat] = (counts[cat] || 0) + 1;
+        });
+
+        return Object.keys(counts)
+            .sort()
+            .map(name => ({ name, count: counts[name] }));
     }
 }
 

@@ -1,4 +1,4 @@
-import { Component } from '@angular/core';
+import { Component, ChangeDetectorRef } from '@angular/core';
 import { RouterModule } from '@angular/router';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
@@ -23,11 +23,11 @@ import { LanguageLevel } from '../../models/flashcard.model';
           <h2>1. Choose Level</h2>
           <div class="level-options">
             <label *ngFor="let level of levels" class="level-radio">
-              <input type="checkbox" [value]="level" (change)="toggleLevel(level)" [checked]="selectedLevels.has(level)">
-              <span class="level-badge" [class.active]="selectedLevels.has(level)">{{ level }}</span>
+              <input type="checkbox" [value]="level" (change)="toggleLevel(level)" [checked]="selectedLevels.includes(level)">
+              <span class="level-badge" [class.active]="selectedLevels.includes(level)">{{ level }}</span>
             </label>
           </div>
-          <p class="hint" *ngIf="selectedLevels.size === 0">Please select at least one level.</p>
+          <p class="hint" *ngIf="selectedLevels.length === 0">Please select at least one level.</p>
         </div>
 
         <!-- Category Selection -->
@@ -35,8 +35,8 @@ import { LanguageLevel } from '../../models/flashcard.model';
           <h2>2. Choose Categories <small>(Optional)</small></h2>
           <div class="level-options category-options">
              <label *ngFor="let cat of categories" class="level-radio">
-                <input type="checkbox" [value]="cat" (change)="toggleCategory(cat)" [checked]="selectedCategories.has(cat)">
-                <span class="level-badge" [class.active]="selectedCategories.has(cat)">{{ cat }}</span>
+                <input type="checkbox" [value]="cat.name" (change)="toggleCategory(cat.name)" [checked]="selectedCategories.includes(cat.name)">
+                <span class="level-badge" [class.active]="selectedCategories.includes(cat.name)">{{ cat.name }} <span class="badge">({{cat.count}})</span></span>
              </label>
           </div>
           <p class="hint small-hint">Leave empty to include all categories.</p>
@@ -46,17 +46,17 @@ import { LanguageLevel } from '../../models/flashcard.model';
         <div class="glass-panel selection-card">
           <h2>2. Choose Mode</h2>
           <div class="mode-options">
-            <button class="mode-btn" (click)="startMode('review')">
+            <button class="mode-btn" (click)="startSession('review')">
               <span class="icon">🃏</span>
               <span class="label">Flashcards</span>
               <span class="desc">Flip cards to learn.</span>
             </button>
-            <button class="mode-btn" (click)="startMode('input')">
+            <button class="mode-btn" (click)="startSession('input')">
               <span class="icon">⌨️</span>
               <span class="label">Type Answer</span>
               <span class="desc">Practice spelling.</span>
             </button>
-            <button class="mode-btn" (click)="startMode('choice')">
+            <button class="mode-btn" (click)="startSession('choice')">
               <span class="icon">🤔</span>
               <span class="label">Multiple Choice</span>
               <span class="desc">Identify the correct term.</span>
@@ -67,9 +67,17 @@ import { LanguageLevel } from '../../models/flashcard.model';
         <!-- Links -->
         <div class="glass-panel selection-card">
           <h2>3. Extras</h2>
-          <div class="extra-links">
-             <button class="btn btn-ghost" routerLink="/stats">View Statistics 📊</button>
-             <button class="btn btn-ghost" routerLink="/dictionary">Dictionary 📖</button>
+          <div class="mode-options">
+             <button class="mode-btn" routerLink="/stats">
+               <span class="icon">📊</span>
+               <span class="label">View Statistics</span>
+               <span class="desc">Track your progress.</span>
+             </button>
+             <button class="mode-btn" routerLink="/dictionary">
+               <span class="icon">📖</span>
+               <span class="label">Dictionary</span>
+               <span class="desc">Browse all words.</span>
+             </button>
           </div>
         </div>
       </div>
@@ -108,14 +116,15 @@ import { LanguageLevel } from '../../models/flashcard.model';
     }
 
     .level-options {
-      display: flex;
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
       gap: 1rem;
-      flex-wrap: wrap;
     }
     .level-radio input { display: none; }
     .level-badge {
-      display: inline-block;
-      padding: 0.5rem 1rem;
+      display: block;
+      text-align: center;
+      padding: 0.75rem 1rem;
       border-radius: var(--radius-sm);
       background: rgba(255,255,255,0.05);
       cursor: pointer;
@@ -175,9 +184,17 @@ import { LanguageLevel } from '../../models/flashcard.model';
     .small-hint { color: var(--text-muted); font-size: 0.8rem; margin-top: 0.5rem; }
     
     .category-options {
-        max-height: 200px;
+        display: flex; /* keep categories as flexible tags or grid? User asked "fill the card" for levels. Categories "add all". Let's stick to flex wrap for categories but allow it to grow */
+        flex-wrap: wrap;
+        max-height: 400px; /* Increased from 200px */
         overflow-y: auto;
         padding-right: 0.5rem;
+    }
+    
+    /* Specific override for categories to behave like tags still, but ensure all are shown */
+    .category-options .level-badge {
+         display: inline-block;
+         width: auto;
     }
     
     .glass-panel h2 small {
@@ -189,47 +206,59 @@ import { LanguageLevel } from '../../models/flashcard.model';
 })
 export class HomeComponent {
   levels: LanguageLevel[] = ['A1', 'A2', 'B1', 'B2'];
-  selectedLevels = new Set<LanguageLevel>(['A1']); // Default A1
+  selectedLevels: LanguageLevel[] = ['A1']; // Default A1
 
-  categories: string[] = [];
-  selectedCategories = new Set<string>();
+  categories: { name: string; count: number }[] = [];
+  selectedCategories: string[] = [];
+  selectedLevel: LanguageLevel = 'A1';
 
-  constructor(private router: Router, private contentService: ContentService) {
-    this.categories = this.contentService.getAllCategories().sort();
+  constructor(private router: Router, private contentService: ContentService, private cdr: ChangeDetectorRef) {
+    // We'll rely on subscription now
+  }
+
+  ngOnInit() {
+    this.contentService.getCards().subscribe(cards => {
+      if (cards.length > 0) {
+        this.updateAvailableCategories();
+      }
+    });
   }
 
   toggleLevel(level: LanguageLevel) {
-    if (this.selectedLevels.has(level)) {
-      this.selectedLevels.delete(level);
+    if (this.selectedLevels.includes(level)) {
+      this.selectedLevels = this.selectedLevels.filter(l => l !== level);
     } else {
-      this.selectedLevels.add(level);
+      this.selectedLevels.push(level);
+    }
+    this.updateAvailableCategories();
+  }
+
+  updateAvailableCategories() {
+    console.log('HomeComponent: Updating categories. Selected levels:', this.selectedLevels);
+    this.categories = this.contentService.getAllCategories(this.selectedLevels);
+    console.log('HomeComponent: Categories updated. Count:', this.categories.length);
+    this.cdr.detectChanges();
+  }
+
+  toggleCategory(categoryName: string) {
+    if (this.selectedCategories.includes(categoryName)) {
+      this.selectedCategories = this.selectedCategories.filter(c => c !== categoryName);
+    } else {
+      this.selectedCategories.push(categoryName);
     }
   }
 
-  toggleCategory(category: string) {
-    if (this.selectedCategories.has(category)) {
-      this.selectedCategories.delete(category);
-    } else {
-      this.selectedCategories.add(category);
-    }
-  }
-
-  startMode(mode: string) {
-    if (this.selectedLevels.size === 0) {
-      alert('Please select at least one level.');
-      return;
+  startSession(mode: 'review' | 'choice' | 'input') {
+    if (this.selectedLevels.length === 0 && this.selectedCategories.length === 0) {
+      // Validation could go here
     }
 
-    // Create params. If categories are empty, don't send param (implies all)
-    const queryParams: any = {
-      levels: Array.from(this.selectedLevels).join(',')
-    };
-
-    if (this.selectedCategories.size > 0) {
-      queryParams.categories = Array.from(this.selectedCategories).join(',');
-    }
-
-    this.router.navigate(['/flashcards', mode], { queryParams });
+    this.router.navigate(['/flashcards', mode], {
+      queryParams: {
+        levels: this.selectedLevels.join(','),
+        categories: this.selectedCategories.join(',')
+      }
+    });
   }
 
   navigateTo(path: string) {

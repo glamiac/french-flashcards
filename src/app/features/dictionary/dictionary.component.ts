@@ -125,9 +125,9 @@ export class DictionaryComponent implements OnInit {
 
     ngOnInit() {
         this.contentService.loadCards();
-        this.contentService.getCards().subscribe((cards: Flashcard[]) => {
+        this.contentService.getCards().subscribe(cards => {
             this.cards = cards;
-            this.categories = this.contentService.getAllCategories().sort();
+            this.categories = this.contentService.getAllCategories().map(c => c.name).sort();
         });
     }
 

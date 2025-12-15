@@ -40,6 +40,7 @@ import { MultipleChoiceComponent } from '../modes/multiple-choice/multiple-choic
           <!-- CHOICE MODE -->
           <app-multiple-choice *ngSwitchCase="'choice'"
             [card]="currentCard"
+            [questionIndex]="currentIndex"
             (next)="onNext($event)">
           </app-multiple-choice>
 
@@ -69,8 +70,9 @@ import { MultipleChoiceComponent } from '../modes/multiple-choice/multiple-choic
                  </div>
               </div>
               <div class="actions">
-                  <button class="btn btn-primary" (click)="restart()">Restart</button>
-                  <button class="btn btn-ghost" (click)="goBack()">Back to Home</button>
+                  <button class="btn btn-primary" (click)="restart()">Next Session</button>
+                  <button class="btn btn-secondary" (click)="goToStats()">Review Stats</button>
+                  <button class="btn btn-ghost" (click)="goBack()">Home</button>
               </div>
           </div>
       </div>
@@ -192,8 +194,14 @@ export class FlashcardViewerComponent implements OnInit {
   }
 
   loadCards(categories: string[] = []) {
-    this.contentService.getCardsByFilters(this.levels, categories).subscribe(cards => {
-      // Shuffle cards
+    this.contentService.getSmartSession(this.levels, categories, 10).subscribe(cards => {
+      // Shuffle is already done in smart session but doing it again doesn't hurt, 
+      // though smart session returns prioritized list so we should arguably NOT shuffle 
+      // across groups if we want to prioritize learning. 
+      // However, mixing them a bit might be nice? 
+      // Actually, the user wants to review. Let's keep the priority order. 
+      // But users usually expect random order in a session.
+      // Let's shuffle the FINAL set of 10 so you don't always get the "hardest" first.
       this.cards = this.shuffle(cards);
       this.currentIndex = 0;
       this.sessionComplete = false;
@@ -228,11 +236,11 @@ export class FlashcardViewerComponent implements OnInit {
   }
 
   restart() {
-    // We need to store selected categories in state if we want to restart with same filter.
-    // For now, let's just grab from current url or store it.
-    // Actually simplest is re-trigger param sub or store it.
-    // Let's store it in a property.
     this.loadCards(this.currentCategories);
+  }
+
+  goToStats() {
+    this.router.navigate(['/stats']);
   }
 
   goBack() {
