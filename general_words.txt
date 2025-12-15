@@ -1,0 +1,39 @@
+General Knowledge Total: 2373
+Sample: [
+  'det',             'oneself',            'mister',
+  'thus',            'alone',              'together',
+  'done',            'nothing',            'name',
+  'need',            'means',              'order',
+  'several',         'word',               'nor',
+  'thanks',          'also',               'example',
+  'measure',         'international',      'madam',
+  'coup',            'foreigner; foreign', 'term',
+  'current',         'interest',           'detail',
+  'clear',           'however',            'research',
+  'elsewhere',       'rest',               'presence',
+  'numerous',        'role',               'American',
+  'particular',      'position',           'effort',
+  'ancient; former', 'handsome',           'personnel',
+  'title',           'unique',             'effort',
+  'despite',         'serious',            'voice',
+  'base',            'the majority'
+]
+Sample End: [
+  'unfavorable',          'promoter',               'Albanian',
+  'obsession',            'neighborhood',           'know-how',
+  'crushing',             'sold',                   'ammunition',
+  'compliment',           'cassette',               'vigilant',
+  'rhetorical',           'cage',                   'regular',
+  'um',                   'racial',                 'statement',
+  'deterioration',        'viable',                 'barbaric; barbarian',
+  'atrocious',            'civil; civics',          'circus; cirque',
+  'legislature',          'audio-visual',           'lightening',
+  'smart',                'productive',             'serenity',
+  'oh',                   'pessimistic; pessimist', 'wake',
+  'synonymous; synonym',  'despair; summit',        'Bosnian',
+  'insignificant',        'interdependent',         'railway',
+  'cereal',               'agitation',              'exodus',
+  'surface',              'pride',                  'socialism',
+  'harmonization',        'cocktail',               'average',
+  'compression; cutback', 'thoughtful'
+]

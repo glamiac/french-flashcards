@@ -1,7 +1,7 @@
 
 import { Injectable } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
-import { Flashcard, LanguageLevel } from '../models/flashcard.model';
+import { Flashcard, LanguageLevel, UserStats } from '../models/flashcard.model';
 import { BehaviorSubject, Observable } from 'rxjs';
 import { map } from 'rxjs/operators';
 import { ProgressService } from './progress.service';
@@ -105,6 +105,49 @@ export class ContentService {
         return Object.keys(counts)
             .sort()
             .map(name => ({ name, count: counts[name] }));
+    }
+
+    getUserStats(): Observable<UserStats> {
+        return this.getCards().pipe(
+            map(cards => {
+                const stats: UserStats = {
+                    totalCorrect: 0,
+                    totalIncorrect: 0,
+                    wordsLearned: 0,
+                    levelAccuracy: { 'A1': 0, 'A2': 0, 'B1': 0, 'B2': 0 },
+                    totalCardsPerLevel: { 'A1': 0, 'A2': 0, 'B1': 0, 'B2': 0 },
+                    levelCorrectCount: { 'A1': 0, 'A2': 0, 'B1': 0, 'B2': 0 },
+                    levelTotalAttempts: { 'A1': 0, 'A2': 0, 'B1': 0, 'B2': 0 }
+                };
+
+                const levels = ['A1', 'A2', 'B1', 'B2'] as LanguageLevel[];
+
+                cards.forEach(card => {
+                    const cardStats = this.progressService.getCardStats(card.id);
+                    stats.totalCorrect += cardStats.correctCount;
+                    stats.totalIncorrect += cardStats.incorrectCount;
+
+                    if (cardStats.streak >= 3) {
+                        stats.wordsLearned++;
+                    }
+
+                    stats.totalCardsPerLevel[card.level] = (stats.totalCardsPerLevel[card.level] || 0) + 1;
+
+                    if (cardStats.correctCount > 0 || cardStats.incorrectCount > 0) {
+                        stats.levelCorrectCount[card.level] += cardStats.correctCount;
+                        stats.levelTotalAttempts[card.level] += (cardStats.correctCount + cardStats.incorrectCount);
+                    }
+                });
+
+                levels.forEach(level => {
+                    if (stats.levelTotalAttempts[level] > 0) {
+                        stats.levelAccuracy[level] = Math.round((stats.levelCorrectCount[level] / stats.levelTotalAttempts[level]) * 100);
+                    }
+                });
+
+                return stats;
+            })
+        );
     }
 }
 

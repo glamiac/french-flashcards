@@ -4,7 +4,7 @@ import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { Router } from '@angular/router';
 import { ContentService } from '../../services/content.service';
-import { LanguageLevel } from '../../models/flashcard.model';
+import { LanguageLevel, UserStats } from '../../models/flashcard.model';
 
 @Component({
   selector: 'app-home',
@@ -44,7 +44,7 @@ import { LanguageLevel } from '../../models/flashcard.model';
 
         <!-- Mode Selection -->
         <div class="glass-panel selection-card">
-          <h2>2. Choose Mode</h2>
+          <h2>3. Choose Mode</h2>
           <div class="mode-options">
             <button class="mode-btn" (click)="startSession('review')">
               <span class="icon">🃏</span>
@@ -61,24 +61,55 @@ import { LanguageLevel } from '../../models/flashcard.model';
               <span class="label">Multiple Choice</span>
               <span class="desc">Identify the correct term.</span>
             </button>
-          </div>
-        </div>
-
-        <!-- Links -->
-        <div class="glass-panel selection-card">
-          <h2>3. Extras</h2>
-          <div class="mode-options">
-             <button class="mode-btn" routerLink="/stats">
-               <span class="icon">📊</span>
-               <span class="label">View Statistics</span>
-               <span class="desc">Track your progress.</span>
-             </button>
              <button class="mode-btn" routerLink="/dictionary">
                <span class="icon">📖</span>
                <span class="label">Dictionary</span>
                <span class="desc">Browse all words.</span>
              </button>
           </div>
+        </div>
+
+        <!-- Stats Card -->
+        <div class="glass-panel selection-card stats-card" *ngIf="userStats">
+            <h2>Your Progress</h2>
+            <div class="stats-grid">
+                <div class="stat-item">
+                    <span class="stat-value">{{ userStats.wordsLearned }}</span>
+                    <span class="stat-label">Words Learned</span>
+                </div>
+                <div class="stat-item">
+                    <span class="stat-value">{{ userStats.totalCorrect }}</span>
+                    <span class="stat-label">Total Correct</span>
+                </div>
+                 <div class="stat-item">
+                    <span class="stat-value">{{ userStats.totalIncorrect }}</span>
+                    <span class="stat-label">Total Incorrect</span>
+                </div>
+            </div>
+            <div class="level-accuracy">
+                <h3>Accuracy by Level</h3>
+                <div class="accuracy-bars">
+                    <div class="accuracy-item" *ngFor="let level of levels">
+                        <div class="level-label">{{ level }}</div>
+                        <div class="progress-bar-bg">
+                            <div class="progress-bar-fill" [style.width.%]="userStats.levelAccuracy[level]" [class.high]="userStats.levelAccuracy[level] >= 80" [class.medium]="userStats.levelAccuracy[level] >= 50 && userStats.levelAccuracy[level] < 80" [class.low]="userStats.levelAccuracy[level] < 50"></div>
+                        </div>
+                        <div class="accuracy-text">
+                            <span *ngIf="userStats.levelTotalAttempts[level] > 0; else noData">
+                                {{ userStats.levelCorrectCount[level] }}/{{ userStats.levelTotalAttempts[level] }}
+                            </span>
+                            <ng-template #noData>-</ng-template>
+                        </div>
+                    </div>
+                </div>
+                <div class="stats-footer">
+                   <button class="mode-btn full-width" routerLink="/stats">
+                     <span class="icon">📊</span>
+                     <span class="label">View Statistics</span>
+                     <span class="desc">See detailed breakdown</span>
+                   </button>
+                </div>
+            </div>
         </div>
       </div>
     </div>
@@ -107,6 +138,10 @@ import { LanguageLevel } from '../../models/flashcard.model';
       display: flex;
       flex-direction: column;
       gap: 1.5rem;
+    }
+    .stats-card {
+        border: 1px solid var(--accent);
+        background: rgba(var(--accent-rgb), 0.05);
     }
 
     h2 {
@@ -202,6 +237,73 @@ import { LanguageLevel } from '../../models/flashcard.model';
         color: var(--text-muted);
         font-weight: normal;
     }
+
+    /* Stats Specific Styles */
+    .stats-grid {
+        display: grid;
+        grid-template-columns: repeat(3, 1fr);
+        gap: 1rem;
+        text-align: center;
+        margin-bottom: 1rem;
+    }
+    .stat-item {
+        display: flex;
+        flex-direction: column;
+        gap: 0.25rem;
+    }
+    .stat-value {
+        font-size: 1.5rem;
+        font-weight: 800;
+        color: var(--accent);
+    }
+    .stat-label {
+        font-size: 0.8rem;
+        color: var(--text-muted);
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+    }
+    .level-accuracy h3 {
+        font-size: 1rem;
+        color: var(--text-main);
+        margin-bottom: 0.75rem;
+    }
+    .accuracy-bars {
+        display: flex;
+        flex-direction: column;
+        gap: 0.5rem;
+    }
+    .accuracy-item {
+        display: grid;
+        grid-template-columns: 30px 1fr 40px;
+        gap: 1rem;
+        align-items: center;
+        font-size: 0.9rem;
+    }
+    .stats-footer {
+        margin-top: 1.5rem;
+    }
+    .progress-bar-bg {
+        height: 6px;
+        background: rgba(255,255,255,0.1);
+        border-radius: 3px;
+        overflow: hidden;
+    }
+    .progress-bar-fill {
+        height: 100%;
+        background: var(--primary);
+        border-radius: 3px;
+        transition: width 0.5s ease-out;
+    }
+    .progress-bar-fill.high { background: #10b981; }
+    .progress-bar-fill.medium { background: #f59e0b; }
+    .progress-bar-fill.low { background: #ef4444; }
+    .accuracy-text {
+        text-align: right;
+        color: var(--text-muted);
+    }
+    .full-width {
+        width: 100%;
+    }
   `]
 })
 export class HomeComponent {
@@ -212,6 +314,8 @@ export class HomeComponent {
   selectedCategories: string[] = [];
   selectedLevel: LanguageLevel = 'A1';
 
+  userStats: UserStats | null = null;
+
   constructor(private router: Router, private contentService: ContentService, private cdr: ChangeDetectorRef) {
     // We'll rely on subscription now
   }
@@ -221,6 +325,11 @@ export class HomeComponent {
       if (cards.length > 0) {
         this.updateAvailableCategories();
       }
+    });
+
+    this.contentService.getUserStats().subscribe(stats => {
+      this.userStats = stats;
+      this.cdr.detectChanges();
     });
   }
 

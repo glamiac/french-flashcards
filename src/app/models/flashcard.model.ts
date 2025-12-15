@@ -21,3 +21,13 @@ export interface CardStats {
 export interface UserProgress {
     stats: Record<string, CardStats>; // Map cardId to stats
 }
+
+export interface UserStats {
+    totalCorrect: number;
+    totalIncorrect: number;
+    wordsLearned: number; // streak >= 3
+    levelAccuracy: Record<LanguageLevel, number>; // percentage 0-100
+    totalCardsPerLevel: Record<LanguageLevel, number>;
+    levelCorrectCount: Record<LanguageLevel, number>;
+    levelTotalAttempts: Record<LanguageLevel, number>;
+}
